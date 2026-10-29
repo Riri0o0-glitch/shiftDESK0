@@ -43,7 +43,7 @@ export function DocumentsPanel({ workspace, update }: { workspace: Workspace; up
     if (!file) return setMessage({ tone: 'info', text: 'Re-select this file to upload it — local files are not kept after a reload.' })
     setUploading(doc.id)
     try {
-      await uploadDocument(file)
+      await uploadDocument(file, workspace.id)
       update((w) => ({ ...w, documents: w.documents.map((d) => (d.id === doc.id ? { ...d, storage: 'uploaded' } : d)) }))
       setMessage(null)
     } catch (err) {
