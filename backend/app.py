@@ -77,6 +77,14 @@ def update_workspace(workspace_id):
         return error("Workspace payload is missing required fields.", 400)
     payload["id"] = workspace_id
     try:
+        existing = workspaces.find_one({"id": workspace_id}, {"_id": 0, "documents": 1})
+        if existing is None:
+            return error("Workspace not found.", 404)
+        stored_documents = {item.get("id"): item for item in existing.get("documents", [])}
+        payload["documents"] = [
+            {**stored_documents.get(item.get("id"), {}), **item}
+            for item in payload["documents"]
+        ]
         result = workspaces.replace_one({"id": workspace_id}, payload)
     except PyMongoError:
         return error("Could not update workspace.", 503)
