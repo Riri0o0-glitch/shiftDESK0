@@ -1,19 +1,20 @@
-// Point these at your Flask backend once the MongoDB-backed endpoints exist.
-// While empty, ShiftDesk keeps all data in this browser (localStorage) and says so in the UI.
 export const apiConfig = {
-  baseUrl: '',
+  baseUrl: process.env.NEXT_PUBLIC_API_URL ?? '',
   endpoints: {
-    uploadDocument: '',
+    uploadDocument: '/api/workspaces',
   },
 } as const
 
-export const isBackendConfigured = apiConfig.baseUrl.length > 0
-export const canUploadDocuments = isBackendConfigured && apiConfig.endpoints.uploadDocument.length > 0
+export const isBackendConfigured = Boolean(apiConfig.baseUrl)
+export const canUploadDocuments = isBackendConfigured
 
-export async function uploadDocument(file: File): Promise<void> {
+export async function uploadDocument(file: File, workspaceId: string): Promise<void> {
   if (!canUploadDocuments) throw new Error('No upload endpoint is configured.')
   const body = new FormData()
   body.append('file', file)
-  const res = await fetch(`${apiConfig.baseUrl}${apiConfig.endpoints.uploadDocument}`, { method: 'POST', body })
+  const res = await fetch(`${apiConfig.baseUrl}${apiConfig.endpoints.uploadDocument}/${encodeURIComponent(workspaceId)}/documents`, {
+    method: 'POST',
+    body,
+  })
   if (!res.ok) throw new Error(`Upload failed (${res.status})`)
 }
