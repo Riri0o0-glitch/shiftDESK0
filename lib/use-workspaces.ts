@@ -74,6 +74,8 @@ export function useWorkspaces() {
     }
   }, [])
 
+  const active = store.workspaces.find((w) => w.id === store.activeId) ?? null
+
   const updateActive = useCallback((fn: (w: Workspace) => Workspace) => {
     if (!active) return
     const next = fn(active)
@@ -84,8 +86,6 @@ export function useWorkspaces() {
       })
     }
   }, [active])
-
-  const active = store.workspaces.find((w) => w.id === store.activeId) ?? null
 
   return { ready, syncError, workspaces: store.workspaces, active, add, select, remove, updateActive }
 }
