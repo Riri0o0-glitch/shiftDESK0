@@ -76,8 +76,9 @@ function SettingsForm({ workspace, update, onClose, onDelete }: { workspace: Wor
       <div className="rounded-md bg-secondary/60 p-3 text-xs leading-relaxed text-muted-foreground">
         <p className="font-medium text-foreground">Storage</p>
         <p className="mt-1">
-          Workspace data is saved in this browser&apos;s localStorage.{' '}
-          {isBackendConfigured ? 'A backend URL is configured in lib/api-config.ts.' : 'No backend is connected yet — set the Flask API URL in lib/api-config.ts.'}
+          {isBackendConfigured
+            ? 'Workspace data is saved in the connected MongoDB database.'
+            : 'No backend is connected, so workspace data is saved in this browser.'}
         </p>
       </div>
 

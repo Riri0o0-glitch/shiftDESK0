@@ -114,9 +114,9 @@ export function WorkspaceHeader({
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground md:inline-flex" title={isBackendConfigured ? 'Backend URL configured' : 'Data is stored in localStorage on this device'}>
+          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground md:inline-flex" title={isBackendConfigured ? 'Workspace data is stored in the connected backend' : 'Data is stored in localStorage on this device'}>
             <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
-            Saved in this browser
+            {isBackendConfigured ? 'Saved to database' : 'Saved in this browser'}
           </span>
           <button
             type="button"
