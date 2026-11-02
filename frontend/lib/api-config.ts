@@ -1,5 +1,5 @@
 export const apiConfig = {
-  baseUrl: process.env.NEXT_PUBLIC_API_URL ?? '',
+  baseUrl: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000',
   endpoints: {
     workspaces: '/api/workspaces',
     uploadDocument: '/api/workspaces',
@@ -44,7 +44,7 @@ export async function deleteWorkspace(id: string): Promise<void> {
   await request(`${apiConfig.endpoints.workspaces}/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
-export async function uploadDocument(file: File, workspaceId: string): Promise<void> {
+export async function uploadDocument<T>(file: File, workspaceId: string): Promise<T> {
   if (!canUploadDocuments) throw new Error('No upload endpoint is configured.')
   const body = new FormData()
   body.append('file', file)
@@ -52,5 +52,17 @@ export async function uploadDocument(file: File, workspaceId: string): Promise<v
     method: 'POST',
     body,
   })
-  if (!res.ok) throw new Error(`Upload failed (${res.status})`)
+  if (!res.ok) {
+    const response = await res.json().catch(() => null) as { error?: string } | null
+    throw new Error(response?.error ?? `Upload failed (${res.status})`)
+  }
+  return res.json() as Promise<T>
+}
+
+export async function deleteDocument(workspaceId: string, documentId: string): Promise<void> {
+  if (!isBackendConfigured) throw new Error('No backend is configured.')
+  await request(
+    `${apiConfig.endpoints.uploadDocument}/${encodeURIComponent(workspaceId)}/documents/${encodeURIComponent(documentId)}`,
+    { method: 'DELETE' },
+  )
 }

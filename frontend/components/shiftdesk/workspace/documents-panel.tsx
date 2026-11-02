@@ -1,11 +1,11 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { FileImage, FileText, Loader2, Trash2, UploadCloud } from 'lucide-react'
 import type { DocumentItem, Workspace, WorkspaceUpdater } from '@/lib/types'
 import { formatBytes, uid } from '@/lib/workspace-utils'
-import { canUploadDocuments, uploadDocument } from '@/lib/api-config'
+import { canUploadDocuments, deleteDocument, uploadDocument } from '@/lib/api-config'
 import { IconButton, Pill } from '../primitives'
 import { cn } from '@/lib/utils'
 
@@ -20,7 +20,7 @@ export function DocumentsPanel({ workspace, update }: { workspace: Workspace; up
   const [message, setMessage] = useState<{ tone: 'error' | 'info'; text: string } | null>(null)
   const [uploading, setUploading] = useState<string | null>(null)
 
-  function addFiles(list: FileList | null) {
+  async function addFiles(list: FileList | null) {
     if (!list) return
     const accepted: DocumentItem[] = []
     const rejected: string[] = []
@@ -43,8 +43,9 @@ export function DocumentsPanel({ workspace, update }: { workspace: Workspace; up
     if (!file) return setMessage({ tone: 'info', text: 'Re-select this file to upload it — local files are not kept after a reload.' })
     setUploading(doc.id)
     try {
-      await uploadDocument(file, workspace.id)
-      update((w) => ({ ...w, documents: w.documents.map((d) => (d.id === doc.id ? { ...d, storage: 'uploaded' } : d)) }))
+      const uploaded = await uploadDocument<DocumentItem>(file, workspace.id)
+      files.current.delete(doc.id)
+      update((w) => ({ ...w, documents: w.documents.map((d) => (d.id === doc.id ? uploaded : d)) }))
       setMessage(null)
     } catch (err) {
       setMessage({ tone: 'error', text: err instanceof Error ? err.message : 'Upload failed.' })
@@ -53,10 +54,28 @@ export function DocumentsPanel({ workspace, update }: { workspace: Workspace; up
     }
   }
 
-  const remove = (id: string) => {
+  async function remove(id: string) {
+    const document = workspace.documents.find((item) => item.id === id)
     files.current.delete(id)
+    if (document?.storage === 'uploaded' && canUploadDocuments) {
+      try {
+        await deleteDocument(workspace.id, id)
+      } catch (err) {
+        setMessage({ tone: 'error', text: err instanceof Error ? err.message : 'Could not delete document.' })
+      }
+    }
     update((w) => ({ ...w, documents: w.documents.filter((d) => d.id !== id) }))
   }
+
+  useEffect(() => {
+    if (!canUploadDocuments) return
+    for (const document of workspace.documents) {
+      if (document.storage === 'local' && files.current.has(document.id) && uploading === null) {
+        void upload(document)
+        break
+      }
+    }
+  }, [workspace.documents, uploading])
 
   return (
     <div>
@@ -89,7 +108,7 @@ export function DocumentsPanel({ workspace, update }: { workspace: Workspace; up
 
       <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
         {canUploadDocuments
-          ? 'Local attachments stay in this browser until you upload them to the backend.'
+          ? 'Files are stored by the backend after upload.'
           : 'No backend is connected, so attachments are local: only the name and size are remembered on this device.'}
       </p>
 
@@ -111,7 +130,7 @@ export function DocumentsPanel({ workspace, update }: { workspace: Workspace; up
                     <p className="truncate text-sm">{d.name}</p>
                     <p className="text-[11px] text-muted-foreground">{formatBytes(d.size)}</p>
                   </div>
-                  {d.storage === 'uploaded' ? <Pill tone="olive">Uploaded</Pill> : <Pill>Local</Pill>}
+                  {d.storage === 'uploaded' ? <Pill tone="olive">Stored</Pill> : <Pill>Pending upload</Pill>}
                   {d.storage === 'local' && canUploadDocuments && (
                     <IconButton label={`Upload ${d.name}`} onClick={() => upload(d)} disabled={uploading === d.id}>
                       {uploading === d.id ? <Loader2 className="size-3.5 animate-spin" /> : <UploadCloud className="size-3.5" />}

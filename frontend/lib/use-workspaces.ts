@@ -18,28 +18,38 @@ export function useWorkspaces() {
 
   useEffect(() => {
     let cancelled = false
+    let localStore: Store | null = null
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) setStore(JSON.parse(raw) as Store)
+      if (raw) localStore = JSON.parse(raw) as Store
     } catch {
-      // Corrupted storage: start fresh rather than crash.
+      localStore = null
     }
     if (!isBackendConfigured) {
+      if (localStore) setStore(localStore)
       setReady(true)
       return () => { cancelled = true }
     }
 
     fetchWorkspaces<Workspace>()
-      .then((workspaces) => {
+      .then(async (workspaces) => {
         if (cancelled) return
+        if (workspaces.length === 0 && localStore?.workspaces.length) {
+          await Promise.all(localStore.workspaces.map((workspace) => createWorkspace(workspace)))
+          workspaces = localStore.workspaces
+        }
         setStore((current) => ({
           workspaces,
-          activeId: workspaces.some((w) => w.id === current.activeId) ? current.activeId : (workspaces[0]?.id ?? null),
+          activeId: workspaces.some((w) => w.id === current.activeId)
+            ? current.activeId
+            : (workspaces[0]?.id ?? null),
         }))
         setSyncError(null)
       })
       .catch((error: unknown) => {
-        if (!cancelled) setSyncError(error instanceof Error ? error.message : 'Could not load workspaces from the backend.')
+        if (cancelled) return
+        if (localStore) setStore(localStore)
+        setSyncError(error instanceof Error ? error.message : 'Could not load workspaces from the backend.')
       })
       .finally(() => {
         if (!cancelled) setReady(true)
@@ -48,7 +58,7 @@ export function useWorkspaces() {
   }, [])
 
   useEffect(() => {
-    if (ready) localStorage.setItem(STORAGE_KEY, JSON.stringify(store))
+    if (ready && !isBackendConfigured) localStorage.setItem(STORAGE_KEY, JSON.stringify(store))
   }, [store, ready])
 
   const add = useCallback((w: Workspace) => {

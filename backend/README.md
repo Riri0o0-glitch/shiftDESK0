@@ -13,7 +13,7 @@ cp .env.example .env
 python app.py
 ```
 
-Set `NEXT_PUBLIC_API_URL=http://localhost:5000` when running the Next.js app so document uploads use the API. Without it, the frontend continues using browser storage.
+Set `NEXT_PUBLIC_API_URL=http://localhost:5000` when running the Next.js app so workspace data and document uploads use the API. The frontend migrates existing browser data to the backend the first time it connects to an empty database.
 
 ## Endpoints
 
